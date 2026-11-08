@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desert Storm Alliance Squad Planner</title>
+    <style>
+        :root {
+            --bg-color: #121824;
+            --card-bg: #1c2438;
+            --accent-color: #3b82f6;
+            --text-color: #f3f4f6;
+            --muted-text: #9ca3af;
+            --border-color: #374151;
+            --tank-color: #ef4444;
+            --air-color: #10b981;
+            --missile-color: #f59e0b;
+            --none-color: #6b7280;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        h1 { margin: 0 0 8px 0; font-size: 2rem; color: #fff; }
+        .setup-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        input[type="text"] {
+            flex: 1;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+        button {
+            background-color: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media(max-width: 768px) {
+            .grid-layout { grid-template-columns: 1fr; }
+        }
+        .roster-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            height: fit-content;
+        }
+        .roster-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        .roster-list {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .player-row {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            background-color: rgba(255,255,255,0.02);
+            border: 1px solid transparent;
+        }
+        .player-row:hover {
+            border-color: var(--border-color);
+        }
+        .type-badge {
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+        .badge-tank { background-color: rgba(239,68,68,0.2); color: var(--tank-color); }
+        .badge-air { background-color: rgba(16,185,129,0.2); color: var(--air-color); }
+        .badge-missile { background-color: rgba(245,158,11,0.2); color: var(--missile-color); }
+        .badge-none { background-color: rgba(107,114,128,0.2); color: var(--muted-text); }
+        .player-power {
+            margin-left: auto;
+            margin-right: 16px;
+            font-weight: 500;
+            color: var(--muted-text);
+        }
+        select {
+            background-color: var(--bg-color);
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .plan-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .lane-card {
+            background-color: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        .lane-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 6px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+        }
+        .lane-meta {
+            font-size: 0.85rem;
+            color: var(--muted-text);
+            margin-bottom: 10px;
+        }
+        .lane-member {
+            font-size: 0.9rem;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: space-between;
+        }
+        .lane-member:last-child { border: none; }
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .error-message {
+            color: #ef4444;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Desert Storm Battle Planner</h1>
+        <p style="color: var(--muted-text); margin: 0;">Last War: Survival — Tactical 2-Phase Deployment Engine</p>
+    </header>
+
+    <div class="setup-box">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Google Sheets CSV Link:</label>
+        <div class="input-group">
+            <input type="text" id="sheetUrl" value="https://google.com" placeholder="Paste your Google Sheets export CSV URL here...">
+            <button onclick="fetchSheetData()">Fetch Roster</button>
+        </div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 600;">OR Local CSV File:</label>
+        <div class="input-group">
+            <input type="file" id="sheetFile" accept=".csv,text/csv,text/plain" onchange="loadLocalFile()">
+        </div>
+        <div id="statusMessage" style="font-size: 0.9rem; color: var(--muted-text);"></div>
+    </div>
+
+    <div class="grid-layout">
+        <!-- LEFT: Attendance & Selection Dashboard -->
+        <div class="roster-card">
+            <div class="roster-header">
+                <div>
+                    <h2 style="margin: 0; font-size: 1.25rem;">Alliance Roster Dashboard</h2>
+                    <div style="font-size: 0.85rem; color: var(--muted-text); margin-top: 4px;" id="countSummary">
+                        Team A: 0/20 | Team B: 0/20
+                    </div>
+                </div>
+                <select id="rosterSort" onchange="renderRosterDashboard()" style="font-size: 0.8rem; padding: 4px 6px;">
+                    <option value="name" selected>Sort: Name (A-Z)</option>
+                    <option value="power">Sort: Power (High-Low)</option>
+                </select>
+            </div>
+            <div class="roster-list" id="rosterContainer">
+                <!-- Loaded dynamically -->
+                <p style="color: var(--muted-text); text-align: center; padding: 20px;">Click 'Fetch Roster' or choose a local CSV file to load data.</p>
+            </div>
+        </div>
+
+        <!-- RIGHT: Tactical Deployment Outputs -->
+        <div class="plan-box">
+            <div class="output-header">
+                <div>
+                    <h2 style="margin: 0; font-size: 1.25rem;">Live Strategic Battle Plan</h2>
+                    <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: var(--muted-text);">Consolidated Alliance Deployments for Team A & Team B</p>
+                </div>
+                <button onclick="copyAlliancePlan()" style="padding: 8px 14px; font-size: 0.85rem; background-color: var(--accent-color); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;" id="copyPlanBtn">
+                    📋 Copy Full Alliance Plan (Team A & B)
+                </button>
+            </div>
+            <div id="battlePlanOutput">
+                <p style="color: var(--muted-text); text-align: center; padding: 20px;">Assign members (1 to 20) to calculate live tactical deployments.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    // Global state arrays
+    let masterRoster = [];
+    let assignments = {}; // Maps playerName -> "1", "2", or "Sub"
+
+    // Backup baseline type list to smoothly loop unassigned rows
+    const fallbackTypes = ["Tank", "Air", "Missile"];
+
+    // Fetch and process data from live Google Sheets CSV link
+    async function fetchSheetData() {
+        const url = document.getElementById('sheetUrl').value.trim();
+        const status = document.getElementById('statusMessage');
+        status.className = '';
+        status.innerText = "Connecting to Google Sheet stream...";
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Failed to download sheet. Check sharing parameters.");
+            loadRosterFromText(await response.text());
+        } catch (err) {
+            status.className = 'error-message';
+            status.innerText = `Error: ${err.message}. Make sure 'Anyone with link can view' is active.`;
+        }
+    }
+
+    // Read roster from a local CSV file chosen by the user
+    async function loadLocalFile() {
+        const file = document.getElementById('sheetFile').files[0];
+        if (!file) return;
+        const status = document.getElementById('statusMessage');
+        status.className = '';
+        status.innerText = `Reading ${file.name}...`;
+
+        try {
+            loadRosterFromText(await file.text());
+        } catch (err) {
+            status.className = 'error-message';
+            status.innerText = `Error: ${err.message}`;
+        } finally {
+            // Clear the input so re-selecting the same (edited) file fires onchange again
+            document.getElementById('sheetFile').value = '';
+        }
+    }
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[ch]));
+    }
+
+    // Shared by both sources: parse CSV text and refresh the dashboard
+    function loadRosterFromText(csvText) {
+        const status = document.getElementById('statusMessage');
+        parseCSV(csvText);
+        status.className = '';
+        status.innerText = `Success! Parsed ${masterRoster.length} total players from master layout.`;
+        renderRosterDashboard();
+        renderBattlePlan();
+    }
+
+    // Manual parser handling quotes, comma distributions, and header/team column detection
+    function parseCSV(text) {
+        masterRoster = [];
+        assignments = {};
+        const lines = text.split(/\r?\n/);
+        if (lines.length < 2) return;
+
+        // Detect if first row is a header and map column indices
+        const firstLineCols = lines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim().toLowerCase());
+        
+        let nameIdx = 0;
+        let powerIdx = 1;
+        let typeIdx = 2;
+        let teamIdx = 3;
+
+        const isHeaderWord = (str) => /name|player|power|cp|strength|type|squad|unit|team|delegat|assign|group|role/i.test(str);
+        const hasHeader = firstLineCols.some(isHeaderWord);
+
+        if (hasHeader) {
+            firstLineCols.forEach((col, idx) => {
+                if (/name|player/i.test(col)) nameIdx = idx;
+                else if (/power|cp|strength/i.test(col)) powerIdx = idx;
+                else if (/type|squad|unit/i.test(col)) typeIdx = idx;
+                else if (/team|delegat|assign|group/i.test(col)) teamIdx = idx;
+            });
+        }
+
+        const startIndex = hasHeader ? 1 : 0;
+        let fallbackCounter = 0;
+
+        for (let i = startIndex; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+
+            const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            if (columns.length < 2) continue;
+
+            let name = (columns[nameIdx] || "").replace(/^"|"$/g, '').trim();
+            let rawPower = (columns[powerIdx] || "").replace(/^"|"$/g, '').trim();
+            let powerNum = parseFloat(rawPower);
+            if (isNaN(powerNum)) powerNum = 0.0;
+
+            let unitType = typeIdx < columns.length ? (columns[typeIdx] || "").replace(/^"|"$/g, '').trim() : "";
+            let teamRaw = teamIdx < columns.length ? (columns[teamIdx] || "").replace(/^"|"$/g, '').trim() : "";
+
+            if (!name || name === "#NAME?") continue;
+
+            // Handle clean type labels mapping to matching badge CSS classes
+            if (unitType.toLowerCase().includes("tank")) unitType = "Tank";
+            else if (unitType.toLowerCase().includes("air")) unitType = "Air";
+            else if (unitType.toLowerCase().includes("missile")) unitType = "Missile";
+            else {
+                unitType = fallbackTypes[fallbackCounter % 3];
+                fallbackCounter++;
+            }
+
+            // Extract team delegation from spreadsheet if present (accepts "A"/"B", "1"/"2", "Team A"/"Team B", etc.)
+            let assignedTeam = "Sub";
+            if (teamRaw) {
+                let lower = teamRaw.toLowerCase().trim();
+                if (lower === "a" || lower === "1" || lower === "team a" || lower === "team 1" || lower === "ta" || lower === "t1" || lower === "teama" || lower === "team1") {
+                    assignedTeam = "A";
+                } else if (lower === "b" || lower === "2" || lower === "team b" || lower === "team 2" || lower === "tb" || lower === "t2" || lower === "teamb" || lower === "team2") {
+                    assignedTeam = "B";
+                } else if ((lower.includes("a") || lower.includes("1")) && !lower.includes("b") && !lower.includes("2")) {
+                    assignedTeam = "A";
+                } else if ((lower.includes("b") || lower.includes("2")) && !lower.includes("a") && !lower.includes("1")) {
+                    assignedTeam = "B";
+                }
+            }
+
+            masterRoster.push({ name, power: powerNum, type: unitType });
+            assignments[name] = assignedTeam;
+        }
+
+        // Sort highest power to lowest power descending
+        masterRoster.sort((a, b) => b.power - a.power);
+    }
+
+    function renderRosterDashboard() {
+        const container = document.getElementById('rosterContainer');
+        container.innerHTML = '';
+
+        const sortMode = document.getElementById('rosterSort') ? document.getElementById('rosterSort').value : 'name';
+        let displayList = [...masterRoster];
+        if (sortMode === 'name') {
+            displayList.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+        } else {
+            displayList.sort((a, b) => b.power - a.power);
+        }
+
+        displayList.forEach(player => {
+            const row = document.createElement('div');
+            row.className = 'player-row';
+            const badgeClass = `badge-${player.type.toLowerCase()}`;
+
+            row.innerHTML = `
+                <span style="font-weight: 600;">${escapeHtml(player.name)}</span>
+                <span class="type-badge ${badgeClass}">${player.type}</span>
+                <span class="player-power">${player.power.toFixed(2)}M</span>
+                <select>
+                    <option value="Sub">Sub</option>
+                    <option value="A">Team A</option>
+                    <option value="B">Team B</option>
+                </select>
+            `;
+            const select = row.querySelector('select');
+            let assignedVal = assignments[player.name];
+            if (assignedVal === "1") assignedVal = "A";
+            if (assignedVal === "2") assignedVal = "B";
+            select.value = assignedVal || "Sub";
+            select.addEventListener('change', () => updateAssignment(player.name, select.value));
+            container.appendChild(row);
+        });
+
+        updateCounts();
+    }
+
+    function updateAssignment(name, teamValue) {
+        assignments[name] = teamValue;
+        updateCounts();
+        renderBattlePlan();
+    }
+
+    function updateCounts() {
+        let tA = 0, tB = 0;
+        for (let key in assignments) {
+            let val = assignments[key];
+            if (val === "A" || val === "1") tA++;
+            if (val === "B" || val === "2") tB++;
+        }
+        document.getElementById('countSummary').innerText = `Team A: ${tA}/20 | Team B: ${tB}/20`;
+    }
+
+    // Calculate tactical sector plan for a single team (A or B)
+    function calculateTeamPlan(teamKey) {
+        let activeSelection = masterRoster.filter(p => assignments[p.name] === teamKey || (teamKey === "A" && assignments[p.name] === "1") || (teamKey === "B" && assignments[p.name] === "2"))
+                                          .sort((a, b) => b.power - a.power);
+
+        let totalPower = activeSelection.reduce((sum, p) => sum + p.power, 0);
+
+        if (activeSelection.length === 0) {
+            return {
+                team: teamKey,
+                count: 0,
+                totalPower: 0,
+                eliteRoamers: [],
+                sectorMap: { A: [], B: [], C: [], D: [] }
+            };
+        }
+
+        // 1. Tiering Logic
+        // Top 4 highest power -> Elite Roamers assigned to Zone E (Center Silo)
+        let numElites = Math.min(4, activeSelection.length);
+        let eliteRoamers = activeSelection.slice(0, numElites);
+        let laneUnits = activeSelection.slice(numElites);
+
+        // 2. Distribute Lane Units into 4 Squads using True Snake Draft
+        let squads = [[], [], [], []];
+        const snakeIdxs = [0, 1, 2, 3, 3, 2, 1, 0, 0, 1, 2, 3, 3, 2, 1, 0];
+        laneUnits.forEach((player, idx) => {
+            squads[snakeIdxs[idx % snakeIdxs.length]].push(player);
+        });
+
+        // 3. Type Counter-Balancing (Enforce max 2 of any single squad type per squad)
+        function getSquadTypeScore(members) {
+            if (members.length === 0) return 0;
+            let counts = getCounts(members);
+            let distinct = Object.keys(counts).length;
+            let maxCount = Math.max(...Object.values(counts));
+            let score = distinct * 1000;
+            if (maxCount >= 3) {
+                score -= (maxCount - 2) * 3000; // Penalize 3+ of same squad type
+            }
+            return score;
+        }
+
+        function getSquadsTotalScore() {
+            return squads.reduce((sum, sq) => sum + getSquadTypeScore(sq), 0);
+        }
+
+        let improved = true;
+        let iterations = 0;
+        while (improved && iterations < 50) {
+            improved = false;
+            iterations++;
+            let currentScore = getSquadsTotalScore();
+
+            for (let i = 0; i < 4; i++) {
+                for (let j = i + 1; j < 4; j++) {
+                    for (let p1 = 0; p1 < squads[i].length; p1++) {
+                        for (let p2 = 0; p2 < squads[j].length; p2++) {
+                            if (squads[i][p1].type === squads[j][p2].type) continue;
+
+                            let player1 = squads[i][p1];
+                            let player2 = squads[j][p2];
+
+                            // Test swap
+                            squads[i][p1] = player2;
+                            squads[j][p2] = player1;
+
+                            let newScore = getSquadsTotalScore();
+                            if (newScore > currentScore) {
+                                currentScore = newScore;
+                                improved = true;
+                            } else {
+                                // Revert
+                                squads[i][p1] = player1;
+                                squads[j][p2] = player2;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sort members within each squad descending by power
+        squads.forEach(sq => sq.sort((a, b) => b.power - a.power));
+
+        // 4. Map the 4 Squads to Zones by Building Priority Order
+        // Priority: Zone C (1st / Strongest) -> Zone D (2nd) -> Zone B (3rd) -> Zone A (4th)
+        squads.sort((sq1, sq2) => {
+            let p1 = sq1.reduce((sum, p) => sum + p.power, 0);
+            let p2 = sq2.reduce((sum, p) => sum + p.power, 0);
+            return p2 - p1;
+        });
+
+        let sectorMap = {
+            C: squads[0] || [], // Strongest Squad -> Priority 1
+            D: squads[1] || [], // 2nd Strongest -> Priority 2
+            B: squads[2] || [], // 3rd Strongest -> Priority 3
+            A: squads[3] || []  // 4th / Absorbs bottom-tier -> Priority 4
+        };
+
+        return {
+            team: teamKey,
+            count: activeSelection.length,
+            totalPower: totalPower,
+            eliteRoamers: eliteRoamers,
+            sectorMap: sectorMap
+        };
+    }
+
+    // Format single team plaintext block matching exact specification
+    function generateTeamText(plan) {
+        if (plan.count === 0) {
+            return `- TEAM ${plan.team} -\n(No members currently assigned to Team ${plan.team})`;
+        }
+        const fmt = (arr) => arr.length > 0 ? arr.map(p => p.name).join(', ') : 'None';
+        return `- TEAM ${plan.team} -\n` +
+            `SECTOR A (NORTHWEST) [Info Center + Oil Refinery]\n` +
+            `• Members: ${fmt(plan.sectorMap['A'])}\n` +
+            `  GOAL: Capture and Defend Both BLDGS\n\n` +
+            `SECTOR B (NORTHEAST) [Field Hospitals + Arsenal]\n` +
+            `• Members: ${fmt(plan.sectorMap['B'])}\n` +
+            `  PHASE 1: Capture and Defend Both Hospitals\n` +
+            `  PHASE 2: (Min 10+): Shift focus to Arsenal (+15% Attack Buff); hold hospitals when possible.\n\n` +
+            `SECTOR C (SOUTHEAST) [Science Hub + Oil Refinery]\n` +
+            `• Members: ${fmt(plan.sectorMap['C'])}\n` +
+            `  GOAL: Capture and Defend Both BLDGS\n\n` +
+            `SECTOR D (SOUTHWEST) [Field Hospitals + Mercenary Factory]\n` +
+            `• Members: ${fmt(plan.sectorMap['D'])}\n` +
+            `  PHASE 1: Capture and Defend Both Hospitals\n` +
+            `  PHASE 2: (Min 10+): Shift focus to Mercenary Factory (-15% Enemy Debuff).\n\n` +
+            `SECTOR E (CENTER) [Nuclear Missile Silo]\n` +
+            `• Roamers: ${fmt(plan.eliteRoamers)}\n` +
+            `  PHASE 1: Float/burn enemy base clusters on the borders. Prepare to port Center at 09:30.\n` +
+            `  PHASE 2 (Min 10+): Lock down and hold the Nuclear Missile Silo (80 pts/s).`;
+    }
+
+    // Copy combined plan for both Team A and Team B to clipboard
+    function copyAlliancePlan() {
+        if (!window._lastPlanText) return;
+        navigator.clipboard.writeText(window._lastPlanText).then(() => {
+            const btn = document.getElementById('copyPlanBtn');
+            if (btn) {
+                btn.innerText = '✅ Copied Team A & B!';
+                setTimeout(() => { btn.innerText = '📋 Copy Full Alliance Plan (Team A & B)'; }, 2500);
+            }
+        }).catch(err => {
+            alert("Copied to clipboard!");
+        });
+    }
+
+    // Render consolidated battle plan for both Team A and Team B
+    function renderBattlePlan() {
+        const output = document.getElementById('battlePlanOutput');
+
+        let planA = calculateTeamPlan("A");
+        let planB = calculateTeamPlan("B");
+
+        if (planA.count === 0 && planB.count === 0) {
+            output.innerHTML = `
+                <p style="color: var(--muted-text); text-align: center; padding: 20px;">
+                    No members selected for Team A or Team B yet.<br>
+                    <span style="font-size:0.85rem;">
+                        Assign members to Team A or Team B in the roster dashboard to calculate deployments.
+                    </span>
+                </p>`;
+            window._lastPlanText = '';
+            return;
+        }
+
+        // Consolidated text block for both teams
+        let fullPlainText = `DESERT STORM TEAM AND ZONE ASSIGNMENTS\n\n` +
+            generateTeamText(planA) + `\n\n` +
+            generateTeamText(planB);
+
+        window._lastPlanText = fullPlainText.trim();
+
+        // Sector descriptive metadata
+        const sectorMeta = [
+            { id: "A", name: "SECTOR A (NORTHWEST)", structures: "Info Center + Oil Refinery", goal: "Capture and Defend Both BLDGS" },
+            { id: "B", name: "SECTOR B (NORTHEAST)", structures: "Field Hospitals + Arsenal", phase1: "Capture and Defend Both Hospitals", phase2: "Shift focus to Arsenal (+15% Attack Buff); hold hospitals when possible." },
+            { id: "C", name: "SECTOR C (SOUTHEAST)", structures: "Science Hub + Oil Refinery", goal: "Capture and Defend Both BLDGS" },
+            { id: "D", name: "SECTOR D (SOUTHWEST)", structures: "Field Hospitals + Mercenary Factory", phase1: "Capture and Defend Both Hospitals", phase2: "Shift focus to Mercenary Factory (-15% Enemy Debuff)." }
+        ];
+
+        // Helper to render HTML card set for a team
+        function renderTeamHTML(plan) {
+            if (plan.count === 0) {
+                return `
+                    <div style="padding: 16px; background: rgba(255,255,255,0.02); border: 1px dashed var(--border-color); border-radius: 8px; margin-bottom: 24px; text-align: center; color: var(--muted-text);">
+                        <strong>TEAM ${plan.team}</strong>: No active members assigned.
+                    </div>`;
+            }
+
+            let tHtml = `
+                <div style="margin-bottom: 28px;">
+                    <div style="margin-bottom: 12px; padding: 10px 14px; background: rgba(59,130,246,0.1); border-left: 4px solid var(--accent-color); border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 700; font-size: 1.1rem; color: #fff;">TEAM ${plan.team} DEPLOYMENTS</span>
+                        <span style="font-size: 0.85rem; color: var(--accent-color); font-weight: 600;">${plan.count}/20 Members | Total: ${plan.totalPower.toFixed(1)}M</span>
+                    </div>
+
+                    <!-- Sector E: Center Silo -->
+                    <div class="lane-card" style="border-left: 3px solid var(--missile-color);">
+                        <div class="lane-title">
+                            <span>👑 SECTOR E (CENTER) [Nuclear Missile Silo]</span>
+                            <span style="font-size:0.9rem; color: var(--accent-color);">${plan.eliteRoamers.reduce((s, p) => s + p.power, 0).toFixed(1)}M</span>
+                        </div>
+                        <div class="lane-meta" style="color: #e5e7eb; font-size: 0.85rem; margin-bottom: 8px;">
+                            <div><strong>PHASE 1:</strong> Float/burn enemy base clusters on the borders. Prep Center port at 09:30.</div>
+                            <div><strong>PHASE 2 (Min 10+):</strong> Lock down and hold the Nuclear Missile Silo (80 pts/s).</div>
+                        </div>
+                        ${plan.eliteRoamers.length > 0 ? plan.eliteRoamers.map(p => `
+                            <div class="lane-member">
+                                <span><strong>${escapeHtml(p.name)}</strong> (${p.power.toFixed(1)}M)</span>
+                                <span class="type-badge badge-${p.type.toLowerCase()}">${p.type}</span>
+                            </div>`).join('') : '<div class="lane-member" style="color: var(--muted-text); font-style: italic;">No roamers assigned.</div>'}
+                    </div>
+
+                    <!-- Outer Quadrants A, B, C, D -->
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+            `;
+
+            sectorMeta.forEach(sec => {
+                let members = plan.sectorMap[sec.id] || [];
+                let secPower = members.reduce((s, p) => s + p.power, 0);
+                let typesArr = members.map(p => p.type);
+                let cCounts = {};
+                typesArr.forEach(t => cCounts[t] = (cCounts[t] || 0) + 1);
+                let compositionStr = Object.keys(cCounts).length > 0
+                    ? Object.keys(cCounts).map(k => `${k}:${cCounts[k]}`).join(', ')
+                    : 'Empty';
+
+                tHtml += `
+                    <div class="lane-card">
+                        <div class="lane-title">
+                            <span>${sec.name} [${sec.structures}]</span>
+                            <span style="font-size:0.9rem; color: var(--accent-color);">${secPower.toFixed(1)}M</span>
+                        </div>
+                        <div class="lane-meta" style="margin-bottom: 8px;">
+                            ${sec.goal ? `<div><strong>GOAL:</strong> ${sec.goal}</div>` : ''}
+                            ${sec.phase1 ? `<div><strong>PHASE 1:</strong> ${sec.phase1}</div>` : ''}
+                            ${sec.phase2 ? `<div><strong>PHASE 2 (Min 10+):</strong> ${sec.phase2}</div>` : ''}
+                            <div style="color: var(--muted-text); margin-top: 4px; font-size: 0.8rem;">Squad Composition: [${compositionStr}]</div>
+                        </div>
+                        ${members.length > 0 ? members.map(p => `
+                            <div class="lane-member">
+                                <span>${escapeHtml(p.name)} (${p.power.toFixed(1)}M)</span>
+                                <span class="type-badge badge-${p.type.toLowerCase()}">${p.type}</span>
+                            </div>`).join('') : '<div class="lane-member" style="color: var(--muted-text); font-style: italic;">No members deployed to this zone.</div>'}
+                    </div>`;
+            });
+
+            tHtml += `</div></div>`;
+            return tHtml;
+        }
+
+        output.innerHTML = renderTeamHTML(planA) + renderTeamHTML(planB);
+    }
+
+    function getCounts(arr) {
+        let counts = {};
+        arr.forEach(p => counts[p.type] = (counts[p.type] || 0) + 1);
+        return counts;
+    }
+</script>
+</body>
+</html>
